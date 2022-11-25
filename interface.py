@@ -1,4 +1,3 @@
-
 import diction
 from analyse import *
 import tkinter
@@ -8,11 +7,13 @@ from tkinter import ttk
 import os
 
 def openfile():
+    #文件路径
     filepath = filedialog.askopenfilename(initialdir= os.getcwd(),
                                         title = "choisissez une trame",
                                         filetypes=(("text files", "*.txt"),
                                             ("all files", "*.*")))
     
+    #窗口
     file = open(filepath, "r")
     for Widgets in fram1.winfo_children():
         Widgets.destroy()
@@ -23,9 +24,9 @@ def openfile():
     print(filename)
     liste = clean_trames(filename)
     
-    
+    #按钮
     creat_button(liste)
-    #obj.pack(clean_trames(filename))
+    
     file.close()
 
 def creat_button(liste):
@@ -91,10 +92,7 @@ def splitTrame(ficher):
             splited[x] = "0000" + splited[x]
         return splited
 
-def checkOffset(a_trame, n):
-    
-    
-            
+def checkOffset(a_trame, n):     
     line1 = ""
     line2 = ""
     offset1 = 0
