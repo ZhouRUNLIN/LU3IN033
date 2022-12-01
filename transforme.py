@@ -25,12 +25,12 @@ def bytes_to_hex(a):
  
 for i in range(packet_num):
     ficName = 'trame/trame' + str(i) + '.txt'
+    print(ficName)
     ftxt = open(ficName, 'w')
 
     for j in range(0, len(packet_data[i])):
         ftxt.write(bytes_to_hex(packet_data[i][j])+" ")
     ftxt.write('\n\n')
     ftxt.close()
- 
- 
+
 fpcap.close()

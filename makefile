@@ -5,4 +5,4 @@ capture:
 
 #clean : initialiser la répertoire
 clean: 
-	rm -f trace/*.pcap trace/*.txt
+	rm -f trame/*.pcap trame/*.txt
