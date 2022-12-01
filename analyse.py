@@ -36,6 +36,9 @@ def decode(s:str):
     """
     return eth_preamble(s)
 
+def decode_no_CRC(s:str):
+    return eth_dest_addr(s)
+
 # ethernet
 def eth_preamble(s:str):
     """
@@ -89,8 +92,8 @@ def ip_version_IHL(s:str):
     !!! Dans le dictionnaire nous le représentons en octets
     """
     l,sr=discharge(s,1)
-    version=h2d_half(l[0])
-    ihl=h2d_half(l[1])*4
+    version=h2d_half(l[0][0])
+    ihl=h2d_half(l[0][1])*4
     return {"Version":version,"IHL":ihl}.update(ip_TOS(sr,ihl-1))
 
 def ip_TOS(s:str,IHL:int):
@@ -107,7 +110,7 @@ def ip_totalL(s:str,IHL:int):
     Total length : 2 octets
     La longueur totale du datagramme, exprimée en octets. En pratique, il est rare qu'un datagramme IP fasse plus de 1500 octets
     """
-    l,sr=discharge(s,1)
+    l,sr=discharge(s,2)
     totalL=h2d_byte(l[0])*256+h2d_byte(l[1])
     return {"Total length":totalL}.update(ip_identification(sr,IHL-2,totalL-4))
 
@@ -131,8 +134,8 @@ def ip_flags_fo(s:str,IHL:int,totalL:int):
     """
     l,sr=discharge(s,2)
     num=int(l[0]+l[1],16)
-    numBin=bin(num)[2:]
-    assert numBin[0]==0
+    numBin="{:016b}".format(num)
+    assert numBin[0]=='0'
     if numBin[1]=='1':
         f="DF"
     elif numBin[2]=='1':
@@ -161,7 +164,7 @@ def ip_protocol(s:str,IHL:int,totalL:int):
     protocol=h2d_byte(l[0])
     assert protocol in (1,6,17)
     prot_Name={1:"ICMP",6:"TCP",17:"UDP"}[protocol]
-    return {"protocol":prot_Name}.update(ip_header_checksum(sr,IHL-1,totalL-1,prot_Name))
+    return {"IP protocol":prot_Name}.update(ip_header_checksum(sr,IHL-1,totalL-1,prot_Name))
 
 def ip_header_checksum(s:str,IHL:int,totalL:int,protocol:str):
     """
@@ -170,4 +173,120 @@ def ip_header_checksum(s:str,IHL:int,totalL:int,protocol:str):
     """
     l,sr=discharge(s,2)
     cs=l[0]+l[1]
-    return {"Header checksum":"0x"+cs}.update(ip_src_addr(sr,IHL-2,totalL-2,protocol))
+    return {"IP Header checksum":"0x"+cs}.update(ip_src_addr(sr,IHL-2,totalL-2,protocol))
+
+def ip_src_addr(s:str,IHL:int,totalL:int,protocol:str):
+    """
+    Source address : 4 octets
+    L’adresse IP de la source du datagramme
+    """
+    l,sr=discharge(s,4)
+    ip=""
+    for i in range(4):
+        ip+=str(h2d_byte(l[i]))+"."
+    ip=ip[0:-1]
+    return {"IP Source address":ip}.update(ip_dest_addr(sr,IHL-4,totalL-4,protocol))
+
+def ip_dest_addr(s:str,IHL:int,totalL:int,protocol:str):
+    """
+    Source address : 4 octets
+    L’adresse IP de la destination du datagramme
+    """
+    l,sr=discharge(s,4)
+    ip=""
+    for i in range(4):
+        ip+=str(h2d_byte(l[i]))+"."
+    ip=ip[0:-1]
+    return {"IP Destination address":ip}
+
+# ARP
+def arp_hardware(s:str):
+    """
+    Type : 2 octets
+    Le type d'interface pour laquelle l'émetteur cherche une réponse
+    """
+    l,sr=discharge(s,2)
+    hw=l[0]+l[1]
+    return {"Hardware":"0x"+hw}.update(arp_protocol(sr))
+
+def arp_protocol(s:str):
+    """
+    Type : 2 octets
+    Le type d'interface pour laquelle l'émetteur cherche une réponse
+    """
+    l,sr=discharge(s,2)
+    protocol=l[0]+l[1]
+    return {"Protocol":"0x"+protocol}.update(arp_Hlen(sr))
+
+def arp_Hlen(s:str):
+    """
+    Type : 1 octet
+    La taille de l’adresse physique (Ethernet) en octets
+    """
+    l,sr=discharge(s,1)
+    hlen=h2d_byte(l[0])
+    return {"Hlen":hlen}.update(arp_Plen(sr))
+
+def arp_Plen(s:str):
+    """
+    Type : 1 octet
+    La taille de l’adresse au niveau protocolaire (IP)
+    """
+    l,sr=discharge(s,1)
+    plen=h2d_byte(l[0])
+    return {"Plen":plen}.update(arp_operation(sr))
+
+def arp_operation(s:str):
+    """
+    Type : 2 octets
+    Le type d’opération à effectuer par le récepteur
+    """
+    l,sr=discharge(s,2)
+    op=l[0]+l[1]
+    return {"Operation":"0x"+op}.update(arp_sender_HA(sr))
+
+def arp_sender_HA(s:str):
+    """
+    Type : 6 octets
+    L’adresse physique (Ethernet) de l’émetteur
+    """
+    l,sr=discharge(s,6)
+    addr=""
+    for byte in l:
+        addr+=byte+":"
+    return {"Sender HA":addr[0:-1]}.update(arp_sender_IA(sr))
+
+def arp_sender_IA(s:str):
+    """
+    Type : 4 octets
+    L’adresse de niveau protocolaire (IP) demandé de l’émetteur 
+    """
+    l,sr=discharge(s,4)
+    ip=""
+    for i in range(4):
+        ip+=str(h2d_byte(l[i]))+"."
+    ip=ip[0:-1]
+    return {"Sender IA":ip}.update(arp_target_HA(sr))
+
+def arp_target_HA(s:str):
+    """
+    Type : 6 octets
+    L’adresse physique (Ethernet) du récepteur
+    """
+    l,sr=discharge(s,6)
+    addr=""
+    for byte in l:
+        addr+=byte+":"
+    return {"Sender HA":addr[0:-1]}.update(arp_target_IA(sr))
+
+def arp_target_IA(s:str):
+    """
+    Type : 4 octets
+    L’adresse de niveau protocolaire (IP) demandé du récepteur 
+    """
+    l,sr=discharge(s,4)
+    ip=""
+    for i in range(4):
+        ip+=str(h2d_byte(l[i]))+"."
+    ip=ip[0:-1]
+    return {"Sender IA":ip}

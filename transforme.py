@@ -30,7 +30,7 @@ for i in range(packet_num):
     for j in range(0, len(packet_data[i])):
         ftxt.write(bytes_to_hex(packet_data[i][j])+" ")
     ftxt.write('\n\n')
+    ftxt.close()
  
  
 fpcap.close()
-ftxt.close()
