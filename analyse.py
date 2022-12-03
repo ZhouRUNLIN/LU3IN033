@@ -29,6 +29,19 @@ def discharge(s:str,n:int):
     l,sr=discharge(s[3:],n-1)
     return ([s[0:2]]+l,sr)
 
+def discharge_end(s:str,n:int):
+    """
+    décharger n octets.
+    return: ([liste des octets],str reste)
+    """
+    if n==0:
+        return ([],s)
+    if ' ' not in s:
+        assert n==1
+        return ([s],"")
+    l,sr=discharge_end(s[0:-3],n-1)
+    return (l+[s[-2:]],sr)
+
 def merge_dict(a:dict,b:dict):
     a.update(b)
     return a
@@ -182,7 +195,7 @@ def ip_header_checksum(s:str,IHL:int,totalL:int,protocol:str):
 def ip_src_addr(s:str,IHL:int,totalL:int,protocol:str):
     """
     Source address : 4 octets
-    L’adresse IP de la source du datagramme
+    L'adresse IP de la source du datagramme
     """
     l,sr=discharge(s,4)
     ip=""
@@ -194,14 +207,14 @@ def ip_src_addr(s:str,IHL:int,totalL:int,protocol:str):
 def ip_dest_addr(s:str,IHL:int,totalL:int,protocol:str):
     """
     Source address : 4 octets
-    L’adresse IP de la destination du datagramme
+    L'adresse IP de la destination du datagramme
     """
     l,sr=discharge(s,4)
     ip=""
     for i in range(4):
         ip+=str(h2d_byte(l[i]))+"."
     ip=ip[0:-1]
-    return {"IP Destination address":ip}
+    return merge_dict({"IP Destination address":ip},ip_option(sr,protocol,0))
 
 # IP options
 def ip_option(s:str,protocol:str,usedLen:int):
@@ -230,6 +243,8 @@ def ip_option_padding(s:str,protocol:str,usedLen:int):
     """
     if usedLen%4!=0:
         l,sr=discharge(s,4-usedLen%4)
+    else:
+        sr=s
     if protocol=="ICMP":
         return icmp_start(sr)
     if protocol=="UDP":
@@ -260,7 +275,7 @@ def arp_protocol(s:str):
 def arp_Hlen(s:str):
     """
     Type : 1 octet
-    La taille de l’adresse physique (Ethernet) en octets
+    La taille de l'adresse physique (Ethernet) en octets
     """
     l,sr=discharge(s,1)
     hlen=h2d_byte(l[0])
@@ -269,7 +284,7 @@ def arp_Hlen(s:str):
 def arp_Plen(s:str):
     """
     Type : 1 octet
-    La taille de l’adresse au niveau protocolaire (IP)
+    La taille de l'adresse au niveau protocolaire (IP)
     """
     l,sr=discharge(s,1)
     plen=h2d_byte(l[0])
@@ -278,7 +293,7 @@ def arp_Plen(s:str):
 def arp_operation(s:str):
     """
     Type : 2 octets
-    Le type d’opération à effectuer par le récepteur
+    Le type d'opération à effectuer par le récepteur
     """
     l,sr=discharge(s,2)
     op=l[0]+l[1]
@@ -287,7 +302,7 @@ def arp_operation(s:str):
 def arp_sender_HA(s:str):
     """
     Type : 6 octets
-    L’adresse physique (Ethernet) de l’émetteur
+    L'adresse physique (Ethernet) de l'émetteur
     """
     l,sr=discharge(s,6)
     addr=""
@@ -298,7 +313,7 @@ def arp_sender_HA(s:str):
 def arp_sender_IA(s:str):
     """
     Type : 4 octets
-    L’adresse de niveau protocolaire (IP) demandé de l’émetteur 
+    L'adresse de niveau protocolaire (IP) demandé de l'émetteur 
     """
     l,sr=discharge(s,4)
     ip=""
@@ -310,7 +325,7 @@ def arp_sender_IA(s:str):
 def arp_target_HA(s:str):
     """
     Type : 6 octets
-    L’adresse physique (Ethernet) du récepteur
+    L'adresse physique (Ethernet) du récepteur
     """
     l,sr=discharge(s,6)
     addr=""
@@ -321,7 +336,7 @@ def arp_target_HA(s:str):
 def arp_target_IA(s:str):
     """
     Type : 4 octets
-    L’adresse de niveau protocolaire (IP) demandé du récepteur 
+    L'adresse de niveau protocolaire (IP) demandé du récepteur 
     """
     l,sr=discharge(s,4)
     ip=""
@@ -364,7 +379,132 @@ def icmp_seq(s:str):
 
 def icmp_opData(s:str):
     """
-    Type : 2 octets
+    Data : ? octets
     """
     return {"ICMP Optional data":"0x"+s}
 
+# UDP
+def udp_src_port(s:str):
+    """
+    Source Port : 2 octets
+    Le port du source
+    """
+    l,sr=discharge(s,2)
+    port=16*h2d_byte(l[0])+h2d_byte(l[1])
+    return merge_dict({"UDP Source port":port},udp_dest_port(sr))
+
+def udp_dest_port(s:str):
+    """
+    Destination Port : 2 octets
+    Le port de la destination
+    """
+    l,sr=discharge(s,2)
+    port=16*h2d_byte(l[0])+h2d_byte(l[1])
+    return merge_dict({"UDP Destination port":port},udp_dest_port(sr))
+
+def udp_length(s:str):
+    """
+    Length : 2 octets
+    La longueur totale (en octets) du segment UDP
+    """
+    l,sr=discharge(s,2)
+    lenU=16*h2d_byte(l[0])+h2d_byte(l[1])
+    return merge_dict({"UDP Length":lenU},udp_checksum(sr))
+
+def udp_checksum(s:str):
+    """
+    Length : 2 octets
+    Champs de contrôle optionnel (mis à zéro si non utilisé) portant sur tout le segment augmenté d'un pseudo en-tête constitué d'informations de l'en-tête IP
+    """
+    l,sr=discharge(s,2)
+    cs=l[0]+l[1]
+    return merge_dict({"UDP checksum":"0x"+cs},udp_data(sr))
+
+def udp_data(s:str):
+    """
+    Data : ? octets
+    """
+    return {"UDP Data":"0x"+s}
+
+# TCP
+def tcp_src_port(s:str):
+    """
+    Source Port : 2 octets
+    Le port du source
+    """
+    l,sr=discharge(s,2)
+    port=16*h2d_byte(l[0])+h2d_byte(l[1])
+    return merge_dict({"TCP Source port":port},tcp_dest_port(sr))
+
+def tcp_dest_port(s:str):
+    """
+    Destination Port : 2 octets
+    Le port de la destination
+    """
+    l,sr=discharge(s,2)
+    port=16*h2d_byte(l[0])+h2d_byte(l[1])
+    return merge_dict({"TCP Destination port":port},tcp_seq_num(sr))
+
+def tcp_seq_num(s:str):
+    """
+    Sequence number : 4 octets
+    Le numéro de séquence du premier octet de données du segment TCP ; si le drapeau SYN est à 1, ce numéro est l'ISN (Initial Sequence Number) 
+    et le premier octet de données sera numéroté ISN+1
+    """
+    l,sr=discharge(s,4)
+    num=(16**3)*h2d_byte(l[0])+(16**2)*h2d_byte(l[1])+16*h2d_byte(l[2])+h2d_byte(l[3])
+    return merge_dict({"TCP Sequence number":num},tcp_ack_num(sr))
+
+def tcp_ack_num(s:str):
+    """
+    Acknowledgement number : 4 octets
+    Le numéro d’acquittement ; si le drapeau ACK est à 1, ce numéro contient la valeur du prochain numéro de séquence que l’émetteur est prêt à recevoir
+    """
+    l,sr=discharge(s,4)
+    num=(16**3)*h2d_byte(l[0])+(16**2)*h2d_byte(l[1])+16*h2d_byte(l[2])+h2d_byte(l[3])
+    return merge_dict({"TCP Acknowledgement number":num},tcp_do_op(sr))
+
+def tcp_do_op(s:str):
+    """
+    Data offset : 4 bits
+    La longueur de l’en-tête TCP exprimée en mots de 32 bits ; elle indique donc où les données commencent
+    Reserved : 6 bits
+    Doit être mis à zéro
+    URG/ACK/PSH/RST/SYN/FIN : 1 bit
+    """
+    l,sr=discharge(s,2)
+    doTcp=h2d_half(l[0][0:1])
+    ops="{:08b}".format(h2d_byte(l[1]))
+    dOp={2:"URG",3:"ACK",4:"PSH",5:"RST",6:"SYN",7:"FIN"}
+    lOp=[]
+    for i in range(2,8):
+        if ops[i]=='1':
+            lOp.append(dOp[i])
+    return merge_dict({"TCP Data offset":doTcp,"TCP Options":lOp},tcp_window(sr))
+
+def tcp_window(s:str):
+    """
+    Window : 2 octets
+    Fenêtre d’anticipation de taille variable ; la valeur de ce champ indique au récepteur combien il peut émettre d’octets après l’octet acquitté
+    """
+    l,sr=discharge(s,2)
+    w=16*h2d_byte(l[0])+h2d_byte(l[1])
+    return merge_dict({"TCP Window":w},tcp_checksum(sr))
+
+def tcp_checksum(s:str):
+    """
+    Checksum : 2 octets
+    Champs de contrôle portant sur tout le segment augmenté d’un pseudo en-tête constitué d’informations de l’en-tête IP
+    """
+    l,sr=discharge(s,2)
+    cs=l[0]+l[1]
+    return merge_dict({"TCP checksum":"0x"+cs},tcp_up(sr))
+
+def tcp_up(s:str):
+    """
+    Urgent pointer : 2 octets
+    Pointeur indiquant l’emplacement des données urgentes ; utilisé uniquement si le drapeau URG est positionné à 1
+    """
+    l,sr=discharge(s,2)
+    w=16*h2d_byte(l[0])+h2d_byte(l[1])
+    return {"TCP Urgent pointer":w}
