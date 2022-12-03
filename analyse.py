@@ -203,6 +203,41 @@ def ip_dest_addr(s:str,IHL:int,totalL:int,protocol:str):
     ip=ip[0:-1]
     return {"IP Destination address":ip}
 
+# IP options
+def ip_option(s:str,protocol:str,usedLen:int):
+    """
+    Type : 1 octet
+    Length : 1 octet
+    Data : Length-2 octets
+    """
+    l,sr=discharge(s,1)
+    if l[0]=="00":
+        return ip_option_padding(sr,protocol,usedLen+1)
+    oType={1:"NOP",7:"RR",68:"TS",131:"LSR",137:"SSR"}[h2d_byte(l[0])]
+    l,sr1=discharge(sr,1)
+    oLen=h2d_byte(l[0])
+    l,sr2=discharge(sr1,oLen-2)
+    oData=""
+    for octet in l:
+        oData+=octet+" "
+    oData=oData[0:-1]
+    return merge_dict({"IP Option "+oType:oData},ip_option(sr2,protocol,usedLen+oLen))
+
+def ip_option_padding(s:str,protocol:str,usedLen:int):
+    """
+    Padding : 0-3 octets
+    Permet d'aligner l'en-tête sur 32 bits
+    """
+    if usedLen%4!=0:
+        l,sr=discharge(s,4-usedLen%4)
+    if protocol=="ICMP":
+        return icmp_start(sr)
+    if protocol=="UDP":
+        return
+    if protocol=="TCP":
+        return
+    assert False
+
 # ARP
 def arp_hardware(s:str):
     """
@@ -294,3 +329,42 @@ def arp_target_IA(s:str):
         ip+=str(h2d_byte(l[i]))+"."
     ip=ip[0:-1]
     return {"Target IA":ip}
+
+#ICMP
+def icmp_start(s:str):
+    """
+    Type : 2 octets
+    Est 0x0800 ou 0x0000
+    """
+    l,sr=discharge(s,2)
+    assert l[0] in ["08","00"]
+    assert l[1] == "00"
+    return icmp_checksum(sr)
+
+def icmp_checksum(s:str):
+    """
+    Type : 2 octets
+    """
+    l,sr=discharge(s,2)
+    return merge_dict({"ICMP Checksum":"0x"+l[0]+l[1]},icmp_identifier(sr))
+
+def icmp_identifier(s:str):
+    """
+    Type : 2 octets
+    """
+    l,sr=discharge(s,2)
+    return merge_dict({"ICMP Identifier":"0x"+l[0]+l[1]},icmp_seq(sr))
+
+def icmp_seq(s:str):
+    """
+    Type : 2 octets
+    """
+    l,sr=discharge(s,2)
+    return merge_dict({"ICMP Sequence number":"0x"+l[0]+l[1]},icmp_opData(sr))
+
+def icmp_opData(s:str):
+    """
+    Type : 2 octets
+    """
+    return {"ICMP Optional data":"0x"+s}
+
