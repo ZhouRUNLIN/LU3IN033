@@ -29,6 +29,10 @@ def discharge(s:str,n:int):
     l,sr=discharge(s[3:],n-1)
     return ([s[0:2]]+l,sr)
 
+def merge_dict(a:dict,b:dict):
+    a.update(b)
+    return a
+
 # Debut
 def decode(s:str):
     """
@@ -56,7 +60,7 @@ def eth_dest_addr(s:str):
     addr=""
     for byte in l:
         addr+=byte+":"
-    return {"Destination address":addr[0:-1]}.update(eth_src_addr(sr))
+    return merge_dict({"Eth Destination address":addr[0:-1]},eth_src_addr(sr))
 
 def eth_src_addr(s:str):
     """
@@ -67,7 +71,7 @@ def eth_src_addr(s:str):
     addr=""
     for byte in l:
         addr+=byte+":"
-    return {"Source address":addr[0:-1]}.update(eth_type(sr))
+    return merge_dict({"Eth Source address":addr[0:-1]},eth_type(sr))
 
 def eth_type(s:str):
     """
@@ -78,9 +82,9 @@ def eth_type(s:str):
     type=l[0]+l[1]
     assert type in ["0800","0806"]
     if type=="0800":
-        return {"Type":"IP"}.update(ip_version_IHL(sr))
+        return merge_dict({"Type":"IP"},ip_version_IHL(sr))
     if type=="0806":
-        return {"Type":"ARP"}.update(arp_hardware(sr))
+        return merge_dict({"Type":"ARP"},arp_hardware(sr))
 
 # ip
 def ip_version_IHL(s:str):
@@ -94,7 +98,7 @@ def ip_version_IHL(s:str):
     l,sr=discharge(s,1)
     version=h2d_half(l[0][0])
     ihl=h2d_half(l[0][1])*4
-    return {"Version":version,"IHL":ihl}.update(ip_TOS(sr,ihl-1))
+    return merge_dict({"Version":version,"IHL":ihl},ip_TOS(sr,ihl-1))
 
 def ip_TOS(s:str,IHL:int):
     """
@@ -103,7 +107,7 @@ def ip_TOS(s:str,IHL:int):
     """
     l,sr=discharge(s,1)
     tos=l[0]
-    return {"TOS":tos}.update(ip_totalL(sr,IHL-1))
+    return merge_dict({"TOS":tos},ip_totalL(sr,IHL-1))
 
 def ip_totalL(s:str,IHL:int):
     """
@@ -112,7 +116,7 @@ def ip_totalL(s:str,IHL:int):
     """
     l,sr=discharge(s,2)
     totalL=h2d_byte(l[0])*256+h2d_byte(l[1])
-    return {"Total length":totalL}.update(ip_identification(sr,IHL-2,totalL-4))
+    return merge_dict({"Total length":totalL},ip_identification(sr,IHL-2,totalL-4))
 
 def ip_identification(s:str,IHL:int,totalL:int):
     """
@@ -121,7 +125,7 @@ def ip_identification(s:str,IHL:int,totalL:int):
     """
     l,sr=discharge(s,2)
     idf=l[0]+l[1]
-    return {"Identification":"0x"+idf}.update(ip_flags_fo(sr,IHL-2,totalL-2))
+    return merge_dict({"Identification":"0x"+idf},ip_flags_fo(sr,IHL-2,totalL-2))
 
 def ip_flags_fo(s:str,IHL:int,totalL:int):
     """
@@ -144,7 +148,7 @@ def ip_flags_fo(s:str,IHL:int,totalL:int):
         f="None"
     numBin=numBin[3:]
     fo=int(numBin,2)
-    return {"flags":f,"Fragment offset":fo}.update(ip_TTL(sr,IHL-2,totalL-2))
+    return merge_dict({"flags":f,"Fragment offset":fo},ip_TTL(sr,IHL-2,totalL-2))
 
 def ip_TTL(s:str,IHL:int,totalL:int):
     """
@@ -153,7 +157,7 @@ def ip_TTL(s:str,IHL:int,totalL:int):
     """
     l,sr=discharge(s,1)
     ttl=h2d_byte(l[0])
-    return {"TTL":ttl}.update(ip_protocol(sr,IHL-1,totalL-1))
+    return merge_dict({"TTL":ttl},ip_protocol(sr,IHL-1,totalL-1))
 
 def ip_protocol(s:str,IHL:int,totalL:int):
     """
@@ -164,7 +168,7 @@ def ip_protocol(s:str,IHL:int,totalL:int):
     protocol=h2d_byte(l[0])
     assert protocol in (1,6,17)
     prot_Name={1:"ICMP",6:"TCP",17:"UDP"}[protocol]
-    return {"IP protocol":prot_Name}.update(ip_header_checksum(sr,IHL-1,totalL-1,prot_Name))
+    return merge_dict({"IP protocol":prot_Name},ip_header_checksum(sr,IHL-1,totalL-1,prot_Name))
 
 def ip_header_checksum(s:str,IHL:int,totalL:int,protocol:str):
     """
@@ -173,7 +177,7 @@ def ip_header_checksum(s:str,IHL:int,totalL:int,protocol:str):
     """
     l,sr=discharge(s,2)
     cs=l[0]+l[1]
-    return {"IP Header checksum":"0x"+cs}.update(ip_src_addr(sr,IHL-2,totalL-2,protocol))
+    return merge_dict({"IP Header checksum":"0x"+cs},ip_src_addr(sr,IHL-2,totalL-2,protocol))
 
 def ip_src_addr(s:str,IHL:int,totalL:int,protocol:str):
     """
@@ -185,7 +189,7 @@ def ip_src_addr(s:str,IHL:int,totalL:int,protocol:str):
     for i in range(4):
         ip+=str(h2d_byte(l[i]))+"."
     ip=ip[0:-1]
-    return {"IP Source address":ip}.update(ip_dest_addr(sr,IHL-4,totalL-4,protocol))
+    return merge_dict({"IP Source address":ip},ip_dest_addr(sr,IHL-4,totalL-4,protocol))
 
 def ip_dest_addr(s:str,IHL:int,totalL:int,protocol:str):
     """
@@ -207,7 +211,7 @@ def arp_hardware(s:str):
     """
     l,sr=discharge(s,2)
     hw=l[0]+l[1]
-    return {"Hardware":"0x"+hw}.update(arp_protocol(sr))
+    return merge_dict({"Hardware":"0x"+hw},arp_protocol(sr))
 
 def arp_protocol(s:str):
     """
@@ -216,7 +220,7 @@ def arp_protocol(s:str):
     """
     l,sr=discharge(s,2)
     protocol=l[0]+l[1]
-    return {"Protocol":"0x"+protocol}.update(arp_Hlen(sr))
+    return merge_dict({"Protocol":"0x"+protocol},arp_Hlen(sr))
 
 def arp_Hlen(s:str):
     """
@@ -225,7 +229,7 @@ def arp_Hlen(s:str):
     """
     l,sr=discharge(s,1)
     hlen=h2d_byte(l[0])
-    return {"Hlen":hlen}.update(arp_Plen(sr))
+    return merge_dict({"Hlen":hlen},arp_Plen(sr))
 
 def arp_Plen(s:str):
     """
@@ -234,7 +238,7 @@ def arp_Plen(s:str):
     """
     l,sr=discharge(s,1)
     plen=h2d_byte(l[0])
-    return {"Plen":plen}.update(arp_operation(sr))
+    return merge_dict({"Plen":plen},arp_operation(sr))
 
 def arp_operation(s:str):
     """
@@ -243,7 +247,7 @@ def arp_operation(s:str):
     """
     l,sr=discharge(s,2)
     op=l[0]+l[1]
-    return {"Operation":"0x"+op}.update(arp_sender_HA(sr))
+    return merge_dict({"Operation":"0x"+op},arp_sender_HA(sr))
 
 def arp_sender_HA(s:str):
     """
@@ -254,7 +258,7 @@ def arp_sender_HA(s:str):
     addr=""
     for byte in l:
         addr+=byte+":"
-    return {"Sender HA":addr[0:-1]}.update(arp_sender_IA(sr))
+    return merge_dict({"Sender HA":addr[0:-1]},arp_sender_IA(sr))
 
 def arp_sender_IA(s:str):
     """
@@ -266,7 +270,7 @@ def arp_sender_IA(s:str):
     for i in range(4):
         ip+=str(h2d_byte(l[i]))+"."
     ip=ip[0:-1]
-    return {"Sender IA":ip}.update(arp_target_HA(sr))
+    return merge_dict({"Sender IA":ip},arp_target_HA(sr))
 
 def arp_target_HA(s:str):
     """
@@ -277,7 +281,7 @@ def arp_target_HA(s:str):
     addr=""
     for byte in l:
         addr+=byte+":"
-    return {"Sender HA":addr[0:-1]}.update(arp_target_IA(sr))
+    return merge_dict({"Target HA":addr[0:-1]},arp_target_IA(sr))
 
 def arp_target_IA(s:str):
     """
@@ -289,4 +293,4 @@ def arp_target_IA(s:str):
     for i in range(4):
         ip+=str(h2d_byte(l[i]))+"."
     ip=ip[0:-1]
-    return {"Sender IA":ip}
+    return {"Target IA":ip}
