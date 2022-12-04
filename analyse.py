@@ -113,12 +113,12 @@ def eth_type(s:str):
     Protocole de niveau supérieur encapsulé dans le champ Data de la trame.
     """
     l,sr=discharge(s,2)
-    type=l[0]+l[1]
-    assert type in ["0800","0806"]
-    if type=="0800":
+    type0=l[0]+l[1]
+    if type0=="0800":
         return merge_dict({"Type":"IP"},ip_version_IHL(sr))
-    if type=="0806":
+    if type0=="0806":
         return merge_dict({"Type":"ARP"},arp_hardware(sr))
+    return {"Type":type0}
 
 # ip
 def ip_version_IHL(s:str):
@@ -200,8 +200,10 @@ def ip_protocol(s:str,IHL:int,totalL:int):
     """
     l,sr=discharge(s,1)
     protocol=h2d_byte(l[0])
-    assert protocol in (1,6,17)
-    prot_Name={1:"ICMP",6:"TCP",17:"UDP"}[protocol]
+    if protocol in (1,6,17):
+        prot_Name={1:"ICMP",6:"TCP",17:"UDP"}[protocol]
+    else:
+        prot_Name=str(protocol)
     return merge_dict({"IP protocol":prot_Name},ip_header_checksum(sr,IHL-1,totalL-1,prot_Name))
 
 def ip_header_checksum(s:str,IHL:int,totalL:int,protocol:str):
@@ -269,10 +271,10 @@ def ip_option_padding(s:str,protocol:str,usedLen:int):
     if protocol=="ICMP":
         return icmp_start(sr)
     if protocol=="UDP":
-        return
+        return udp_src_port(sr)
     if protocol=="TCP":
-        return
-    assert False
+        return tcp_src_port(sr)
+    return dict()
 
 # ARP
 def arp_hardware(s:str):
