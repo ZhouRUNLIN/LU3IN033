@@ -3,3 +3,6 @@ s="08 00 20 0A AC 96 08 00 20 0A 70 66 08 00 4F 00 00 7C CB C9 00 00 FF 01 B9 7F
 print(decode_no_CRC(s))
 arp="FF FF FF FF FF FF F0 B4 29 13 15 CC 08 06 00 01 08 00 06 04 00 01 F0 B4 29 13 15 CC C0 A8 1F 01 00 00 00 00 00 00 C0 A8 1F 02"
 print(decode_no_CRC(arp))
+t="f8 4d 89 85 ee 46 8c fd de c5 b6 cc 08 00 45 00 00 1f 5f e2 00 00 40 01 97 7d c0 a8 01 01 c0 a8 01 2d 00 00 59 81 c7 71 15 45 71 c7 58 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 "
+t=t.upper()
+print(decode_no_CRC(t))
