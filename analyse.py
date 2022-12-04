@@ -118,13 +118,13 @@ def eth_type(s:str):
         try:
             d=ip_version_IHL(sr)
         except:
-            d=dict()
+            d={"Wrong data":1}
         return merge_dict({"Type":"IP"},d)
     if type0=="0806":
         try:
             d=arp_hardware(sr)
         except:
-            d=dict()
+            d={"Wrong data":1}
         return merge_dict({"Type":"ARP"},d)
     return {"Type":type0}
 
@@ -280,19 +280,19 @@ def ip_option_padding(s:str,protocol:str,usedLen:int):
         try:
             d=icmp_start(sr)
         except:
-            d=dict()
+            d={"Wrong data":1}
         return d
     if protocol=="UDP":
         try:
             d=udp_src_port(sr)
         except:
-            d=dict()
+            d={"Wrong data":1}
         return d
     if protocol=="TCP":
         try:
             d=tcp_src_port(sr)
         except:
-            d=dict()
+            d={"Wrong data":1}
         return d
     return dict()
 
