@@ -115,12 +115,11 @@ def eth_type(s:str):
     l,sr=discharge(s,2)
     type0=l[0]+l[1]
     if type0=="0800":
-        """try:
+        try:
             d=ip_version_IHL(sr)
         except:
             d={"Wrong data":1}
-        return merge_dict({"Type":"IP"},d)"""
-        return merge_dict({"Type":"IP"},ip_version_IHL(sr))
+        return merge_dict({"Type":"IP"},d)
     if type0=="0806":
         try:
             d=arp_hardware(sr)
