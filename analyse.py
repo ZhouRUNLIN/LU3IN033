@@ -29,22 +29,43 @@ def discharge(s:str,n:int):
     l,sr=discharge(s[3:],n-1)
     return ([s[0:2]]+l,sr)
 
-def discharge_end(s:str,n:int):
-    """
-    décharger n octets.
-    return: ([liste des octets],str reste)
-    """
-    if n==0:
-        return ([],s)
-    if ' ' not in s:
-        assert n==1
-        return ([s],"")
-    l,sr=discharge_end(s[0:-3],n-1)
-    return (l+[s[-2:]],sr)
-
 def merge_dict(a:dict,b:dict):
     a.update(b)
     return a
+
+# Trier
+def sort_tcp_frames(l:list):
+    """
+    Trier les trames de tcp
+    """
+    frames_a=[i for i in l if i["TCP Source port"]==l[0]["TCP Source port"]]
+    frames_b=[i for i in l if i["TCP Source port"]!=l[0]["TCP Source port"]]
+    frames_a=sort_frames_side(frames_a)
+    frames_b=sort_frames_side(frames_b)
+    i=1
+    j=1
+    l0=[frames_a[0],frames_b[0]]
+    ack=[frames_a[0]["TCP Acknowledgement number"],frames_b[0]["TCP Acknowledgement number"]]
+    while i<len(frames_a) and j<len(frames_b):
+        if frames_a[i]["TCP Sequence number"] in ack:
+            l0.append(frames_a[i])
+            ack.append(frames_a[i]["TCP Acknowledgement number"])
+            i+=1
+        if frames_b[j]["TCP Sequence number"] in ack:
+            l0.append(frames_b[j])
+            ack.append(frames_b[j]["TCP Acknowledgement number"])
+            j+=1
+    l0+=frames_a[i:]+frames_b[j:]
+    return l0
+
+def sort_frames_side(l:list):
+    for i in range(len(l)):
+        for j in range(i+1,len(l)):
+            if l[i]["TCP Sequence number"]>l[j]["TCP Sequence number"]:
+                t=l[i]
+                l[i]=l[j]
+                l[j]=t
+    return l
 
 # Debut
 def decode(s:str):
