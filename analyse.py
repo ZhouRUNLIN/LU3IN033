@@ -269,9 +269,9 @@ def ip_option_padding(s:str,protocol:str,usedLen:int):
     if protocol=="ICMP":
         return icmp_start(sr)
     if protocol=="UDP":
-        return
+        return udp_src_port
     if protocol=="TCP":
-        return
+        return tcp_src_port
     assert False
 
 # ARP
