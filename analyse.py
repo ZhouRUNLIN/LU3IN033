@@ -115,11 +115,12 @@ def eth_type(s:str):
     l,sr=discharge(s,2)
     type0=l[0]+l[1]
     if type0=="0800":
-        try:
+        """try:
             d=ip_version_IHL(sr)
         except:
             d={"Wrong data":1}
-        return merge_dict({"Type":"IP"},d)
+        return merge_dict({"Type":"IP"},d)"""
+        return merge_dict({"Type":"IP"},ip_version_IHL(sr))
     if type0=="0806":
         try:
             d=arp_hardware(sr)
@@ -245,10 +246,12 @@ def ip_dest_addr(s:str,IHL:int,totalL:int,protocol:str):
     for i in range(4):
         ip+=str(h2d_byte(l[i]))+"."
     ip=ip[0:-1]
-    return merge_dict({"IP Destination address":ip},ip_option(sr,protocol,0))
+    if IHL-4==0:
+        return merge_dict({"IP Destination address":ip},ip_to_protocol(sr,protocol))
+    return merge_dict({"IP Destination address":ip},ip_option(sr,protocol,IHL-4))
 
 # IP options
-def ip_option(s:str,protocol:str,usedLen:int):
+def ip_option(s:str,protocol:str,IHL:int):
     """
     Type : 1 octet
     Length : 1 octet
@@ -256,8 +259,12 @@ def ip_option(s:str,protocol:str,usedLen:int):
     """
     l,sr=discharge(s,1)
     if l[0]=="00":
-        return ip_option_padding(sr,protocol,usedLen+1)
-    oType={1:"NOP",7:"RR",68:"TS",131:"LSR",137:"SSR"}[h2d_byte(l[0])]
+        return ip_option_padding(sr,protocol,IHL-1)
+    dType={1:"NOP",7:"RR",68:"TS",131:"LSR",137:"SSR"}
+    if h2d_byte(l[0]) in dType:
+        oType=dType[h2d_byte(l[0])]
+    else:
+        oType=str(h2d_byte(l[0]))
     l,sr1=discharge(sr,1)
     oLen=h2d_byte(l[0])
     l,sr2=discharge(sr1,oLen-2)
@@ -265,32 +272,32 @@ def ip_option(s:str,protocol:str,usedLen:int):
     for octet in l:
         oData+=octet+" "
     oData=oData[0:-1]
-    return merge_dict({"IP Option "+oType:oData},ip_option(sr2,protocol,usedLen+oLen))
+    return merge_dict({"IP Option "+oType:oData},ip_option(sr2,protocol,IHL-oLen))
 
-def ip_option_padding(s:str,protocol:str,usedLen:int):
+def ip_option_padding(s:str,protocol:str,IHL:int):
     """
     Padding : 0-3 octets
     Permet d'aligner l'en-tête sur 32 bits
     """
-    if usedLen%4!=0:
-        l,sr=discharge(s,4-usedLen%4)
-    else:
-        sr=s
+    l,sr=discharge(s,IHL)
+    return ip_to_protocol(sr,protocol)
+
+def ip_to_protocol(s:str,protocol:str):
     if protocol=="ICMP":
         try:
-            d=icmp_start(sr)
+            d=icmp_start(s)
         except:
             d={"Wrong data":1}
         return d
     if protocol=="UDP":
         try:
-            d=udp_src_port(sr)
+            d=udp_src_port(s)
         except:
             d={"Wrong data":1}
         return d
     if protocol=="TCP":
         try:
-            d=tcp_src_port(sr)
+            d=tcp_src_port(s)
         except:
             d={"Wrong data":1}
         return d
