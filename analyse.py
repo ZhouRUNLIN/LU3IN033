@@ -80,7 +80,7 @@ def decode_no_CRC(s:str):
 def decode_simplified(s:str):
     d=decode_no_CRC(s)
     ds=dict()
-    for key in ["Eth Destination address","Eth Source address","IP Source address","IP Destination address","TCP Source port","TCP Destination port","UDP Source port","UDP Destination port","TCP Sequence number","TCP Acknowledgement number","Wrong data"]:
+    for key in ["Eth Destination address","Eth Source address","IP Source address","IP Destination address","TCP Source port","TCP Destination port","UDP Source port","UDP Destination port","TCP Sequence number","TCP Acknowledgement number","HTTP Type","HTTP Method","HTTP URL","HTTP Status","HTTP Version","HTTP Message","Wrong data"]:
         ds.update({key:d[key]})
     return ds
 
@@ -490,18 +490,18 @@ def tcp_src_port(s:str):
     """
     l,sr=discharge(s,2)
     port=16*h2d_byte(l[0])+h2d_byte(l[1])
-    return merge_dict({"TCP Source port":port},tcp_dest_port(sr))
+    return merge_dict({"TCP Source port":port},tcp_dest_port(sr,port))
 
-def tcp_dest_port(s:str):
+def tcp_dest_port(s:str,sp:int):
     """
     Destination Port : 2 octets
     Le port de la destination
     """
     l,sr=discharge(s,2)
     port=16*h2d_byte(l[0])+h2d_byte(l[1])
-    return merge_dict({"TCP Destination port":port},tcp_seq_num(sr))
+    return merge_dict({"TCP Destination port":port},tcp_seq_num(sr,sp))
 
-def tcp_seq_num(s:str):
+def tcp_seq_num(s:str,sp:int):
     """
     Sequence number : 4 octets
     Le numéro de séquence du premier octet de données du segment TCP ; si le drapeau SYN est à 1, ce numéro est l'ISN (Initial Sequence Number) 
@@ -509,18 +509,18 @@ def tcp_seq_num(s:str):
     """
     l,sr=discharge(s,4)
     num=(16**3)*h2d_byte(l[0])+(16**2)*h2d_byte(l[1])+16*h2d_byte(l[2])+h2d_byte(l[3])
-    return merge_dict({"TCP Sequence number":num},tcp_ack_num(sr))
+    return merge_dict({"TCP Sequence number":num},tcp_ack_num(sr,sp))
 
-def tcp_ack_num(s:str):
+def tcp_ack_num(s:str,sp:int):
     """
     Acknowledgement number : 4 octets
     Le numéro d’acquittement ; si le drapeau ACK est à 1, ce numéro contient la valeur du prochain numéro de séquence que l’émetteur est prêt à recevoir
     """
     l,sr=discharge(s,4)
     num=(16**3)*h2d_byte(l[0])+(16**2)*h2d_byte(l[1])+16*h2d_byte(l[2])+h2d_byte(l[3])
-    return merge_dict({"TCP Acknowledgement number":num},tcp_do_op(sr))
+    return merge_dict({"TCP Acknowledgement number":num},tcp_do_op(sr,sp))
 
-def tcp_do_op(s:str):
+def tcp_do_op(s:str,sp:int):
     """
     Data offset : 4 bits
     La longueur de l’en-tête TCP exprimée en mots de 32 bits ; elle indique donc où les données commencent
@@ -536,31 +536,100 @@ def tcp_do_op(s:str):
     for i in range(2,8):
         if ops[i]=='1':
             lOp.append(dOp[i])
-    return merge_dict({"TCP Data offset":doTcp,"TCP Options":lOp},tcp_window(sr))
+    return merge_dict({"TCP Data offset":doTcp,"TCP Options":lOp},tcp_window(sr,sp))
 
-def tcp_window(s:str):
+def tcp_window(s:str,sp:int):
     """
     Window : 2 octets
     Fenêtre d’anticipation de taille variable ; la valeur de ce champ indique au récepteur combien il peut émettre d’octets après l’octet acquitté
     """
     l,sr=discharge(s,2)
     w=16*h2d_byte(l[0])+h2d_byte(l[1])
-    return merge_dict({"TCP Window":w},tcp_checksum(sr))
+    return merge_dict({"TCP Window":w},tcp_checksum(sr,sp))
 
-def tcp_checksum(s:str):
+def tcp_checksum(s:str,sp:int):
     """
     Checksum : 2 octets
     Champs de contrôle portant sur tout le segment augmenté d’un pseudo en-tête constitué d’informations de l’en-tête IP
     """
     l,sr=discharge(s,2)
     cs=l[0]+l[1]
-    return merge_dict({"TCP checksum":"0x"+cs},tcp_up(sr))
+    return merge_dict({"TCP checksum":"0x"+cs},tcp_up(sr,sp))
 
-def tcp_up(s:str):
+def tcp_up(s:str,sp:int):
     """
     Urgent pointer : 2 octets
     Pointeur indiquant l’emplacement des données urgentes ; utilisé uniquement si le drapeau URG est positionné à 1
     """
     l,sr=discharge(s,2)
     w=16*h2d_byte(l[0])+h2d_byte(l[1])
-    return {"TCP Urgent pointer":w}
+    return merge_dict({"TCP Urgent pointer":w},tcp_options(sr,sp,0))
+
+def tcp_options(s:str,sp:int,usedLen:int):
+    """
+    Type : 1 octet
+    Length : 1 octet
+    Data : Length-2 octets
+    """
+    l,sr=discharge(s,1)
+    if l[0] in ["00","01"]:
+        return tcp_option_padding(sr,sp,usedLen+1)
+    oType=str(h2d_byte(l[0]))
+    l,sr1=discharge(sr,1)
+    oLen=h2d_byte(l[0])
+    l,sr2=discharge(sr1,oLen-2)
+    oData=""
+    for octet in l:
+        oData+=octet+" "
+    oData=oData[0:-1]
+    return merge_dict({"TCP Option "+oType:oData},tcp_options(sr2,sp,usedLen+oLen))
+
+def tcp_option_padding(s:str,sp:int,usedLen:int):
+    """
+    Padding : 0-3 octets
+    Permet d'aligner l'en-tête sur 32 bits
+    """
+    if usedLen%4!=0:
+        l,sr=discharge(s,4-usedLen)
+    else:
+        sr=s
+    return tcp_to_protocol(sr,sp)
+
+def tcp_to_protocol(s:str,sp:int):
+    if sp==80:
+        try:
+            return http_method_version(s)
+        except:
+            return {"Wrong data":1}
+    return {"TCP Data":s}
+
+# http
+def http_method_version(s:str):
+    l,sr=discharge(s,1)
+    m=""
+    while l[0]!="20":
+        m+=chr(h2d_byte(l[0]))
+        l,sr=discharge(sr.copy(),1)
+    if m in ["GET","HEAD","POST","PUT","DELETE","CONNECT","OPTIONS","TRACE","PATCH"]:
+        return merge_dict({"HTTP Type":"Request","HTTP Method":m},http_URL_status(sr,0))
+    return merge_dict({"HTTP Type":"Response","HTTP Version":m},http_URL_status(sr,1))
+
+def http_URL_status(s:str,t:int):
+    l,sr=discharge(s,1)
+    m=""
+    while l[0]!="20":
+        m+=chr(h2d_byte(l[0]))
+        l,sr=discharge(sr.copy(),1)
+    if t==0:
+        return merge_dict({"HTTP URL":m},http_version_message(sr,t))
+    return merge_dict({"HTTP Status":m},http_version_message(sr,t))
+
+def http_version_message(s:str,t:int):
+    l,sr=discharge(s,1)
+    m=""
+    while l[0]!="0D":
+        m+=chr(h2d_byte(l[0]))
+        l,sr=discharge(sr.copy(),1)
+    if t==0:
+        return {"HTTP Version":m}
+    return {"HTTP Message":m}
