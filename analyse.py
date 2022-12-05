@@ -77,6 +77,13 @@ def decode(s:str):
 def decode_no_CRC(s:str):
     return eth_dest_addr(s)
 
+def decode_simplified(s:str):
+    d=decode_no_CRC(s)
+    ds=dict()
+    for key in ["Eth Destination address","Eth Source address","IP Source address","IP Destination address","TCP Source port","TCP Destination port","UDP Source port","UDP Destination port","TCP Sequence number","TCP Acknowledgement number","Wrong data"]:
+        ds.update({key:d[key]})
+    return ds
+
 # ethernet
 def eth_preamble(s:str):
     """
