@@ -1,8 +1,5 @@
 from analyse import *
-s="08 00 20 0A AC 96 08 00 20 0A 70 66 08 00 4F 00 00 7C CB C9 00 00 FF 01 B9 7F 84 E3 3D 05 C0 21 9F 06 07 27 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 08 00 A2 56 2F 00 00 00 29 36 8C 41 00 03 86 2B 08 09 0A 0B 0C 0D 0E 0F 10 11 12 13 14 15 16 17 18 19 1A 1B 1C 1D 1E 1F 20 21 22 23 24 25 26 27 28 29 2A 2B 2C 2D 2E 2F 30 31 32 33 34 35 36 37"
-print(decode_no_CRC(s))
-arp="FF FF FF FF FF FF F0 B4 29 13 15 CC 08 06 00 01 08 00 06 04 00 01 F0 B4 29 13 15 CC C0 A8 1F 01 00 00 00 00 00 00 C0 A8 1F 02"
-print(decode_no_CRC(arp))
-t="f8 4d 89 85 ee 46 8c fd de c5 b6 cc 08 00 45 00 00 1f 5f e2 00 00 40 01 97 7d c0 a8 01 01 c0 a8 01 2d 00 00 59 81 c7 71 15 45 71 c7 58 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 "
-t=t.upper()
-print(decode_no_CRC(t))
+t="f8 4d 89 85 ee 46 8c fd de c5 b6 cc 08 00 45 00 00 47 84 71 40 00 30 06 bd fb b7 02 8f 6c c0 a8 01 2d 01 bb c0 a3 6e fc 02 d3 0d 9f a4 bd 50 18 01 f5 14 80 00 00 15 03 03 00 1a f5 71 69 40 6d d2 dc fb 32 1f 44 53 a6 39 8e f3 15 33 a3 1a 0f f5 b5 7a 93 9a "
+print(decode_simplified(t))
+packet_num=1
+print(str(packet_num) + " packages have been captured")
