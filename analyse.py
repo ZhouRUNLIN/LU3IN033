@@ -80,8 +80,9 @@ def decode_no_CRC(s:str):
 def decode_simplified(s:str):
     d=decode_no_CRC(s)
     ds=dict()
-    for key in ["Eth Destination address","Eth Source address","IP Source address","IP Destination address","TCP Source port","TCP Destination port","UDP Source port","UDP Destination port","TCP Sequence number","TCP Acknowledgement number","HTTP Type","HTTP Method","HTTP URL","HTTP Status","HTTP Version","HTTP Message","Wrong data"]:
-        ds.update({key:d[key]})
+    for key in ["Type","IP protocol","IP Source address","IP Destination address","TCP Source port","TCP Destination port","UDP Source port","UDP Destination port","TCP Sequence number","TCP Acknowledgement number","HTTP Type","HTTP Method","HTTP URL","HTTP Status","HTTP Version","HTTP Message","Wrong data"]:
+        if key in d.keys():
+            ds.update({key:d[key]})
     return ds
 
 # ethernet

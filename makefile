@@ -1,9 +1,17 @@
+#obtenir les donnees necessaire
+install:
+	./getInformation.sh > information.txt
+
 #capture : capture tous les trames passer sur en0 dans 3 secondes et stocker les ficher en format de .txt
 capture:
-	tcpdump -i en0 tcp -w trame/trace.pcap & sleep 5 
+	tcpdump -i en0 tcp -w trame/trace.pcap & sleep 10 
 	python3 transforme.py
 	rm -f trame/trace.pcap
 
+#analyser les trame et mettre les trame a l'ordre de temps
+analyse:
+	python3 classifieur.py
+
 #clean : initialiser la répertoire
 clean: 
-	rm -f trame/*.txt
+	rm -f trame/*.txt information.txt
