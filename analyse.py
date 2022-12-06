@@ -500,9 +500,13 @@ def tcp_dest_port(s:str,sp:int):
     """
     l,sr=discharge(s,2)
     port=16*h2d_byte(l[0])+h2d_byte(l[1])
-    return merge_dict({"TCP Destination port":port},tcp_seq_num(sr,sp))
+    if 80 in [sp,port]:
+        http=1
+    else:
+        http=0
+    return merge_dict({"TCP Destination port":port},tcp_seq_num(sr,http))
 
-def tcp_seq_num(s:str,sp:int):
+def tcp_seq_num(s:str,http:int):
     """
     Sequence number : 4 octets
     Le numéro de séquence du premier octet de données du segment TCP ; si le drapeau SYN est à 1, ce numéro est l'ISN (Initial Sequence Number) 
@@ -510,18 +514,18 @@ def tcp_seq_num(s:str,sp:int):
     """
     l,sr=discharge(s,4)
     num=(16**3)*h2d_byte(l[0])+(16**2)*h2d_byte(l[1])+16*h2d_byte(l[2])+h2d_byte(l[3])
-    return merge_dict({"TCP Sequence number":num},tcp_ack_num(sr,sp))
+    return merge_dict({"TCP Sequence number":num},tcp_ack_num(sr,http))
 
-def tcp_ack_num(s:str,sp:int):
+def tcp_ack_num(s:str,http:int):
     """
     Acknowledgement number : 4 octets
     Le numéro d’acquittement ; si le drapeau ACK est à 1, ce numéro contient la valeur du prochain numéro de séquence que l’émetteur est prêt à recevoir
     """
     l,sr=discharge(s,4)
     num=(16**3)*h2d_byte(l[0])+(16**2)*h2d_byte(l[1])+16*h2d_byte(l[2])+h2d_byte(l[3])
-    return merge_dict({"TCP Acknowledgement number":num},tcp_do_op(sr,sp))
+    return merge_dict({"TCP Acknowledgement number":num},tcp_do_op(sr,http))
 
-def tcp_do_op(s:str,sp:int):
+def tcp_do_op(s:str,http:int):
     """
     Data offset : 4 bits
     La longueur de l’en-tête TCP exprimée en mots de 32 bits ; elle indique donc où les données commencent
@@ -537,36 +541,36 @@ def tcp_do_op(s:str,sp:int):
     for i in range(2,8):
         if ops[i]=='1':
             lOp.append(dOp[i])
-    return merge_dict({"TCP Data offset":doTcp,"TCP Options":lOp},tcp_window(sr,sp))
+    return merge_dict({"TCP Data offset":doTcp,"TCP Options":lOp},tcp_window(sr,http))
 
-def tcp_window(s:str,sp:int):
+def tcp_window(s:str,http:int):
     """
     Window : 2 octets
     Fenêtre d’anticipation de taille variable ; la valeur de ce champ indique au récepteur combien il peut émettre d’octets après l’octet acquitté
     """
     l,sr=discharge(s,2)
     w=16*h2d_byte(l[0])+h2d_byte(l[1])
-    return merge_dict({"TCP Window":w},tcp_checksum(sr,sp))
+    return merge_dict({"TCP Window":w},tcp_checksum(sr,http))
 
-def tcp_checksum(s:str,sp:int):
+def tcp_checksum(s:str,http:int):
     """
     Checksum : 2 octets
     Champs de contrôle portant sur tout le segment augmenté d’un pseudo en-tête constitué d’informations de l’en-tête IP
     """
     l,sr=discharge(s,2)
     cs=l[0]+l[1]
-    return merge_dict({"TCP checksum":"0x"+cs},tcp_up(sr,sp))
+    return merge_dict({"TCP checksum":"0x"+cs},tcp_up(sr,http))
 
-def tcp_up(s:str,sp:int):
+def tcp_up(s:str,http:int):
     """
     Urgent pointer : 2 octets
     Pointeur indiquant l’emplacement des données urgentes ; utilisé uniquement si le drapeau URG est positionné à 1
     """
     l,sr=discharge(s,2)
     w=16*h2d_byte(l[0])+h2d_byte(l[1])
-    return merge_dict({"TCP Urgent pointer":w},tcp_options(sr,sp,0))
+    return merge_dict({"TCP Urgent pointer":w},tcp_options(sr,http,0))
 
-def tcp_options(s:str,sp:int,usedLen:int):
+def tcp_options(s:str,http:int,usedLen:int):
     """
     Type : 1 octet
     Length : 1 octet
@@ -585,7 +589,7 @@ def tcp_options(s:str,sp:int,usedLen:int):
     oData=oData[0:-1]
     return merge_dict({"TCP Option "+oType:oData},tcp_options(sr2,sp,usedLen+oLen))
 
-def tcp_option_padding(s:str,sp:int,usedLen:int):
+def tcp_option_padding(s:str,http:int,usedLen:int):
     """
     Padding : 0-3 octets
     Permet d'aligner l'en-tête sur 32 bits
@@ -594,10 +598,10 @@ def tcp_option_padding(s:str,sp:int,usedLen:int):
         l,sr=discharge(s,4-usedLen)
     else:
         sr=s
-    return tcp_to_protocol(sr,sp)
+    return tcp_to_protocol(sr,http)
 
-def tcp_to_protocol(s:str,sp:int):
-    if sp==80:
+def tcp_to_protocol(s:str,http:int):
+    if http==1:
         try:
             return http_method_version(s)
         except:
