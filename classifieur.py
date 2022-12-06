@@ -106,12 +106,12 @@ for i in range(len(contenueListe)):
             print(" ".ljust(23), end="")
             print("SN : {:d}   ".format(contenueListe[i]["TCP Sequence number"]), end="")
             print("AN : {:d}   ".format(contenueListe[i]["TCP Acknowledgement number"], end=""))
-
-            print(contenueListe[0]['IP Destination address'].center(15), end='')
-            print("{:^7d}".format(contenueListe[0]["TCP Destination port"]), end='')
+            
+            print(contenueListe[0]['IP Source address'].center(15), end='')
+            print("{:^7d}".format(contenueListe[0]["TCP Source port"]), end='')
             print("<-------------------", end='')
             print("--------------------", end='')
-            print("{:^7d}".format(contenueListe[0]["TCP Source port"]), end='')
-            print(contenueListe[0]['IP Source address'].center(15))
+            print("{:^7d}".format(contenueListe[0]["TCP Destination port"]), end='')
+            print(contenueListe[0]['IP Destination address'].center(15))
     else:
         print("IP")
