@@ -1,5 +1,4 @@
 from analyse import *
-t="f8 4d 89 85 ee 46 8c fd de c5 b6 cc 08 00 45 00 00 47 84 71 40 00 30 06 bd fb b7 02 8f 6c c0 a8 01 2d 01 bb c0 a3 6e fc 02 d3 0d 9f a4 bd 50 18 01 f5 14 80 00 00 15 03 03 00 1a f5 71 69 40 6d d2 dc fb 32 1f 44 53 a6 39 8e f3 15 33 a3 1a 0f f5 b5 7a 93 9a "
-print(decode_simplified(t))
-packet_num=1
-print(str(packet_num) + " packages have been captured")
+t="b0 73 5d 82 cb 84 d8 5e d3 ab 78 f0 08 00 45 00 00 db 1a cc 40 00 80 06 00 00 c0 a8 03 c4 5e b0 b7 3e e7 fa 00 50 8e a4 62 21 6e b9 98 87 50 18 04 01 db 28 00 00 47 45 54 20 2f 77 77 2f 70 61 74 63 68 65 73 2f 77 6f 77 73 5f 30 2e 31 31 2e 31 31 2e 30 2e 36 36 32 33 30 34 32 5f 77 77 2f 77 6f 77 73 2e 77 77 5f 30 2e 31 31 2e 31 31 2e 30 2e 36 36 32 33 30 34 32 5f 30 2e 31 31 2e 31 30 2e 30 2e 36 34 37 34 36 32 34 5f 63 6c 69 65 6e 74 2e 77 67 70 6b 67 20 48 54 54 50 2f 31 2e 31 0d 0a 48 6f 73 74 3a 20 64 6c 2d 77 6f 77 73 2d 67 63 2e 77 61 72 67 61 6d 69 6e 67 2e 6e 65 74 0d 0a 52 61 6e 67 65 3a 20 62 79 74 65 73 3d 32 31 37 34 37 34 36 36 32 34 2d 32 31 39 31 35 32 33 38 33 39 0d 0a 0d 0a"
+t=t.upper()
+print(decode_no_CRC(t))

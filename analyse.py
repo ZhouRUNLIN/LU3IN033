@@ -519,7 +519,7 @@ def tcp_seq_num(s:str,http:int):
 def tcp_ack_num(s:str,http:int):
     """
     Acknowledgement number : 4 octets
-    Le numéro d’acquittement ; si le drapeau ACK est à 1, ce numéro contient la valeur du prochain numéro de séquence que l’émetteur est prêt à recevoir
+    Le numéro d'acquittement ; si le drapeau ACK est à 1, ce numéro contient la valeur du prochain numéro de séquence que l'émetteur est prêt à recevoir
     """
     l,sr=discharge(s,4)
     num=(16**3)*h2d_byte(l[0])+(16**2)*h2d_byte(l[1])+16*h2d_byte(l[2])+h2d_byte(l[3])
@@ -528,7 +528,7 @@ def tcp_ack_num(s:str,http:int):
 def tcp_do_op(s:str,http:int):
     """
     Data offset : 4 bits
-    La longueur de l’en-tête TCP exprimée en mots de 32 bits ; elle indique donc où les données commencent
+    La longueur de l'en-tête TCP exprimée en mots de 32 bits ; elle indique donc où les données commencent
     Reserved : 6 bits
     Doit être mis à zéro
     URG/ACK/PSH/RST/SYN/FIN : 1 bit
@@ -541,36 +541,38 @@ def tcp_do_op(s:str,http:int):
     for i in range(2,8):
         if ops[i]=='1':
             lOp.append(dOp[i])
-    return merge_dict({"TCP Data offset":doTcp,"TCP Flags":lOp},tcp_window(sr,http))
+    return merge_dict({"TCP Data offset":doTcp,"TCP Flags":lOp},tcp_window(sr,http,4*doTcp-20))
 
-def tcp_window(s:str,http:int):
+def tcp_window(s:str,http:int,lo:int):
     """
     Window : 2 octets
-    Fenêtre d’anticipation de taille variable ; la valeur de ce champ indique au récepteur combien il peut émettre d’octets après l’octet acquitté
+    Fenêtre d'anticipation de taille variable ; la valeur de ce champ indique au récepteur combien il peut émettre d'octets après l'octet acquitté
     """
     l,sr=discharge(s,2)
     w=16*h2d_byte(l[0])+h2d_byte(l[1])
-    return merge_dict({"TCP Window":w},tcp_checksum(sr,http))
+    return merge_dict({"TCP Window":w},tcp_checksum(sr,http,lo))
 
-def tcp_checksum(s:str,http:int):
+def tcp_checksum(s:str,http:int,lo:int):
     """
     Checksum : 2 octets
-    Champs de contrôle portant sur tout le segment augmenté d’un pseudo en-tête constitué d’informations de l’en-tête IP
+    Champs de contrôle portant sur tout le segment augmenté d'un pseudo en-tête constitué d'informations de l'en-tête IP
     """
     l,sr=discharge(s,2)
     cs=l[0]+l[1]
-    return merge_dict({"TCP checksum":"0x"+cs},tcp_up(sr,http))
+    return merge_dict({"TCP checksum":"0x"+cs},tcp_up(sr,http,lo))
 
-def tcp_up(s:str,http:int):
+def tcp_up(s:str,http:int,lo:int):
     """
     Urgent pointer : 2 octets
-    Pointeur indiquant l’emplacement des données urgentes ; utilisé uniquement si le drapeau URG est positionné à 1
+    Pointeur indiquant l'emplacement des données urgentes ; utilisé uniquement si le drapeau URG est positionné à 1
     """
     l,sr=discharge(s,2)
     w=16*h2d_byte(l[0])+h2d_byte(l[1])
-    return merge_dict({"TCP Urgent pointer":w},tcp_options(sr,http,0))
+    if lo==0:
+        return merge_dict({"TCP Urgent pointer":w},tcp_to_protocol(sr,http))
+    return merge_dict({"TCP Urgent pointer":w},tcp_options(sr,http,lo))
 
-def tcp_options(s:str,http:int,usedLen:int):
+def tcp_options(s:str,http:int,lo:int):
     """
     Type : 1 octet
     Length : 1 octet
@@ -578,7 +580,7 @@ def tcp_options(s:str,http:int,usedLen:int):
     """
     l,sr=discharge(s,1)
     if l[0] in ["00","01"]:
-        return tcp_option_padding(sr,sp,usedLen+1)
+        return tcp_option_padding(sr,http,lo-1)
     oType=str(h2d_byte(l[0]))
     l,sr1=discharge(sr,1)
     oLen=h2d_byte(l[0])
@@ -587,17 +589,14 @@ def tcp_options(s:str,http:int,usedLen:int):
     for octet in l:
         oData+=octet+" "
     oData=oData[0:-1]
-    return merge_dict({"TCP Option "+oType:oData},tcp_options(sr2,sp,usedLen+oLen))
+    return merge_dict({"TCP Option "+oType:oData},tcp_options(sr2,http,lo-oLen))
 
-def tcp_option_padding(s:str,http:int,usedLen:int):
+def tcp_option_padding(s:str,http:int,lo:int):
     """
     Padding : 0-3 octets
     Permet d'aligner l'en-tête sur 32 bits
     """
-    if usedLen%4!=0:
-        l,sr=discharge(s,4-usedLen)
-    else:
-        sr=s
+    l,sr=discharge(s,lo)
     return tcp_to_protocol(sr,http)
 
 def tcp_to_protocol(s:str,http:int):
@@ -614,7 +613,7 @@ def http_method_version(s:str):
     m=""
     while l[0]!="20":
         m+=chr(h2d_byte(l[0]))
-        l,sr=discharge(sr.copy(),1)
+        l,sr=discharge(sr[:],1)
     if m in ["GET","HEAD","POST","PUT","DELETE","CONNECT","OPTIONS","TRACE","PATCH"]:
         return merge_dict({"HTTP Type":"Request","HTTP Method":m},http_URL_status(sr,0))
     return merge_dict({"HTTP Type":"Response","HTTP Version":m},http_URL_status(sr,1))
@@ -624,7 +623,7 @@ def http_URL_status(s:str,t:int):
     m=""
     while l[0]!="20":
         m+=chr(h2d_byte(l[0]))
-        l,sr=discharge(sr.copy(),1)
+        l,sr=discharge(sr[:],1)
     if t==0:
         return merge_dict({"HTTP URL":m},http_version_message(sr,t))
     return merge_dict({"HTTP Status":m},http_version_message(sr,t))
@@ -634,7 +633,7 @@ def http_version_message(s:str,t:int):
     m=""
     while l[0]!="0D":
         m+=chr(h2d_byte(l[0]))
-        l,sr=discharge(sr.copy(),1)
+        l,sr=discharge(sr[:],1)
     if t==0:
         return {"HTTP Version":m}
     return {"HTTP Message":m}
