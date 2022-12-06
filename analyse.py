@@ -80,7 +80,7 @@ def decode_no_CRC(s:str):
 def decode_simplified(s:str):
     d=decode_no_CRC(s)
     ds=dict()
-    for key in ["Type","IP protocol","IP Source address","IP Destination address","TCP Source port","TCP Destination port","UDP Source port","UDP Destination port","TCP Sequence number","TCP Acknowledgement number","HTTP Type","HTTP Method","HTTP URL","HTTP Status","HTTP Version","HTTP Message","Wrong data"]:
+    for key in ["Type","IP protocol","IP Source address","IP Destination address","TCP Source port","TCP Destination port","UDP Source port","UDP Destination port","TCP Sequence number","TCP Acknowledgement number","TCP Flags","HTTP Type","HTTP Method","HTTP URL","HTTP Status","HTTP Version","HTTP Message","Wrong data"]:
         if key in d.keys():
             ds.update({key:d[key]})
     return ds
@@ -541,7 +541,7 @@ def tcp_do_op(s:str,http:int):
     for i in range(2,8):
         if ops[i]=='1':
             lOp.append(dOp[i])
-    return merge_dict({"TCP Data offset":doTcp,"TCP Options":lOp},tcp_window(sr,http))
+    return merge_dict({"TCP Data offset":doTcp,"TCP Flags":lOp},tcp_window(sr,http))
 
 def tcp_window(s:str,http:int):
     """
