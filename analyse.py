@@ -447,7 +447,7 @@ def udp_src_port(s:str):
     Le port du source
     """
     l,sr=discharge(s,2)
-    port=16*h2d_byte(l[0])+h2d_byte(l[1])
+    port=256*h2d_byte(l[0])+h2d_byte(l[1])
     return merge_dict({"UDP Source port":port},udp_dest_port(sr))
 
 def udp_dest_port(s:str):
@@ -456,7 +456,7 @@ def udp_dest_port(s:str):
     Le port de la destination
     """
     l,sr=discharge(s,2)
-    port=16*h2d_byte(l[0])+h2d_byte(l[1])
+    port=256*h2d_byte(l[0])+h2d_byte(l[1])
     return merge_dict({"UDP Destination port":port},udp_dest_port(sr))
 
 def udp_length(s:str):
@@ -465,7 +465,7 @@ def udp_length(s:str):
     La longueur totale (en octets) du segment UDP
     """
     l,sr=discharge(s,2)
-    lenU=16*h2d_byte(l[0])+h2d_byte(l[1])
+    lenU=256*h2d_byte(l[0])+h2d_byte(l[1])
     return merge_dict({"UDP Length":lenU},udp_checksum(sr))
 
 def udp_checksum(s:str):
@@ -490,7 +490,7 @@ def tcp_src_port(s:str):
     Le port du source
     """
     l,sr=discharge(s,2)
-    port=16*h2d_byte(l[0])+h2d_byte(l[1])
+    port=256*h2d_byte(l[0])+h2d_byte(l[1])
     return merge_dict({"TCP Source port":port},tcp_dest_port(sr,port))
 
 def tcp_dest_port(s:str,sp:int):
@@ -499,7 +499,7 @@ def tcp_dest_port(s:str,sp:int):
     Le port de la destination
     """
     l,sr=discharge(s,2)
-    port=16*h2d_byte(l[0])+h2d_byte(l[1])
+    port=256*h2d_byte(l[0])+h2d_byte(l[1])
     if 80 in [sp,port]:
         http=1
     else:
@@ -513,7 +513,7 @@ def tcp_seq_num(s:str,http:int):
     et le premier octet de données sera numéroté ISN+1
     """
     l,sr=discharge(s,4)
-    num=(16**3)*h2d_byte(l[0])+(16**2)*h2d_byte(l[1])+16*h2d_byte(l[2])+h2d_byte(l[3])
+    num=(256**3)*h2d_byte(l[0])+(256**2)*h2d_byte(l[1])+256*h2d_byte(l[2])+h2d_byte(l[3])
     return merge_dict({"TCP Sequence number":num},tcp_ack_num(sr,http))
 
 def tcp_ack_num(s:str,http:int):
@@ -522,7 +522,7 @@ def tcp_ack_num(s:str,http:int):
     Le numéro d'acquittement ; si le drapeau ACK est à 1, ce numéro contient la valeur du prochain numéro de séquence que l'émetteur est prêt à recevoir
     """
     l,sr=discharge(s,4)
-    num=(16**3)*h2d_byte(l[0])+(16**2)*h2d_byte(l[1])+16*h2d_byte(l[2])+h2d_byte(l[3])
+    num=(256**3)*h2d_byte(l[0])+(256**2)*h2d_byte(l[1])+256*h2d_byte(l[2])+h2d_byte(l[3])
     return merge_dict({"TCP Acknowledgement number":num},tcp_do_op(sr,http))
 
 def tcp_do_op(s:str,http:int):
@@ -549,7 +549,7 @@ def tcp_window(s:str,http:int,lo:int):
     Fenêtre d'anticipation de taille variable ; la valeur de ce champ indique au récepteur combien il peut émettre d'octets après l'octet acquitté
     """
     l,sr=discharge(s,2)
-    w=16*h2d_byte(l[0])+h2d_byte(l[1])
+    w=256*h2d_byte(l[0])+h2d_byte(l[1])
     return merge_dict({"TCP Window":w},tcp_checksum(sr,http,lo))
 
 def tcp_checksum(s:str,http:int,lo:int):
@@ -567,7 +567,7 @@ def tcp_up(s:str,http:int,lo:int):
     Pointeur indiquant l'emplacement des données urgentes ; utilisé uniquement si le drapeau URG est positionné à 1
     """
     l,sr=discharge(s,2)
-    w=16*h2d_byte(l[0])+h2d_byte(l[1])
+    w=256*h2d_byte(l[0])+h2d_byte(l[1])
     if lo==0:
         return merge_dict({"TCP Urgent pointer":w},tcp_to_protocol(sr,http))
     return merge_dict({"TCP Urgent pointer":w},tcp_options(sr,http,lo))
