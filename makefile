@@ -11,8 +11,8 @@ capture:
 
 #analyser les trame et mettre les trame a l'ordre de temps
 analyse:
-	python3 classifieur.py
+	python3 classifieur.py 2>&1 | tee fluxRes.txt
 
 #clean : initialiser la répertoire
 clean: 
-	rm -f trame/*.txt information.txt
+	rm -f trame/*.txt *.txt
