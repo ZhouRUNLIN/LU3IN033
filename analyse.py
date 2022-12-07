@@ -80,7 +80,7 @@ def decode_no_CRC(s:str):
 def decode_simplified(s:str):
     d=decode_no_CRC(s)
     ds=dict()
-    for key in ["Type","IP protocol","IP Source address","IP Destination address","TCP Source port","TCP Destination port","UDP Source port","UDP Destination port","TCP Sequence number","TCP Acknowledgement number","TCP Flags","HTTP Type","HTTP Method","HTTP URL","HTTP Status","HTTP Version","HTTP Message","Wrong data"]:
+    for key in ["Type","IP protocol","IP Source address","IP Destination address","TCP Source port","TCP Destination port","UDP Source port","UDP Destination port","TCP Sequence number","TCP Acknowledgement number","TCP Flags","TCP Window","HTTP Type","HTTP Method","HTTP URL","HTTP Status","HTTP Version","HTTP Message","Wrong data"]:
         if key in d.keys():
             ds.update({key:d[key]})
     return ds
@@ -624,6 +624,7 @@ def http_URL_status(s:str,t:int):
     while l[0]!="20":
         m+=chr(h2d_byte(l[0]))
         l,sr=discharge(sr[:],1)
+        
     if t==0:
         return merge_dict({"HTTP URL":m},http_version_message(sr,t))
     return merge_dict({"HTTP Status":m},http_version_message(sr,t))
