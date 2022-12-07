@@ -616,7 +616,9 @@ def http_method_version(s:str):
         l,sr=discharge(sr[:],1)
     if m in ["GET","HEAD","POST","PUT","DELETE","CONNECT","OPTIONS","TRACE","PATCH"]:
         return merge_dict({"HTTP Type":"Request","HTTP Method":m},http_URL_status(sr,0))
-    return merge_dict({"HTTP Type":"Response","HTTP Version":m},http_URL_status(sr,1))
+    elif "HTTP" in m:
+        return merge_dict({"HTTP Type":"Response","HTTP Version":m},http_URL_status(sr,1))
+    return{"TCP Data":s}
 
 def http_URL_status(s:str,t:int):
     l,sr=discharge(s,1)
